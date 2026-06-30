@@ -7,8 +7,8 @@ local CurrentCamera = workspace.CurrentCamera
 
 local module = {
 	SlideSpeed = 12,
-	TurningSpeed = 120,
-	Gravity = workspace.Gravity * 1.3,
+	TurningSpeed = 150,
+	Gravity = workspace.Gravity * .6,
 	Friction = 0.4,
 }
 
@@ -100,12 +100,12 @@ function module.Init()
 			local posOnPlane = projectPointOnPlane(rayOrigin, rayCast.Position, rayCast.Normal)
 
 			nextPos = posOnPlane + rayCast.Normal * rayLenght
-			velocity = dir3.Unit * velocity.Magnitude
+			--velocity = dir3.Unit * velocity.Magnitude
 
 			local gravity = Vector3.yAxis * -module.Gravity
 			local gravityAlongSlope = gravity - rayCast.Normal * gravity:Dot(rayCast.Normal)
 
-			velocity += gravityAlongSlope * deltaTime
+			velocity = gravityAlongSlope * deltaTime
 			velocity = applyFriction(velocity, module.Friction, deltaTime)
 		else
 			velocity = velocity - Vector3.yAxis * (module.Gravity * deltaTime)
@@ -117,7 +117,7 @@ function module.Init()
 
 		if rayCast2 then
 			local dotProduct = rayCast2.Normal:Dot(velocity.Unit)
-			if dotProduct > -0.65 then
+			if dotProduct > -0.85 then
 				velocity = bounce(velocity.Unit, rayCast2, distance) * velocity.Magnitude
 			end
 		end
