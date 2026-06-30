@@ -8,7 +8,7 @@ local CurrentCamera = workspace.CurrentCamera
 local module = {
 	SlideSpeed = 12,
 	TurningSpeed = 150,
-	Gravity = workspace.Gravity * .6,
+	Gravity = workspace.Gravity * 0.6,
 	Friction = 0.4,
 }
 
@@ -73,13 +73,16 @@ function module.Init()
 	end
 
 	newTrove:Add(RunService.RenderStepped:Connect(function(deltaTime: number)
-		local diff2 = tick() - lastTimeOnGround
+		--local diff2 = tick() - lastTimeOnGround
 		local rayOrigin = hrs.Position
-		local rayDir = (velocity-(Vector3.yAxis * .5)) * (rayLenght * 1.05)
+		local rayDir = (-Vector3.yAxis + velocity.Unit).Unit * rayLenght
+		local rayDir2 = -Vector3.yAxis * rayLenght
 		local nextPos
-		local rayCast = workspace:Raycast(rayOrigin, rayDir, param)
+		local ray = workspace:Raycast(rayOrigin, rayDir, param)
+		local ray2 = workspace:Raycast(rayOrigin, rayDir2, param)
 
-		if rayCast then
+		if ray or ray2 then
+			local rayCast = ray or ray2
 			lastTimeOnGround = tick()
 			local dir1 = Vector3.new(velocity.Unit.X, 0, velocity.Unit.Z)
 
@@ -92,20 +95,16 @@ function module.Init()
 				)
 			).LookVector -- Neutral camera rotation
 
-			local dir3 = projectPointOnPlane(
-				dir1:Lerp(dir2, (module.TurningSpeed / 100) * deltaTime),
-				rayCast.Position,
-				rayCast.Normal
-			) -- slight and FINAL rotation.
-			local posOnPlane = projectPointOnPlane(rayOrigin, rayCast.Position, rayCast.Normal)
+			local dir3 = projectVectorOnPlane(dir1:Lerp(dir2, (module.TurningSpeed / 100) * deltaTime), rayCast.Normal) -- slight and FINAL rotation.
+			--local posOnPlane = projectPointOnPlane(rayOrigin, rayCast.Position, rayCast.Normal)
 
-			nextPos = posOnPlane + rayCast.Normal * rayLenght
-			--velocity = dir3.Unit * velocity.Magnitude
+			nextPos = rayCast.Normal + rayCast.Normal * rayLenght
+			velocity = dir3.Unit * velocity.Magnitude
 
 			local gravity = Vector3.yAxis * -module.Gravity
 			local gravityAlongSlope = gravity - rayCast.Normal * gravity:Dot(rayCast.Normal)
 
-			velocity = gravityAlongSlope * deltaTime
+			velocity += gravityAlongSlope * deltaTime
 		else
 			velocity = velocity - Vector3.yAxis * (module.Gravity * deltaTime)
 			nextPos = rayOrigin
@@ -122,7 +121,12 @@ function module.Init()
 		end
 
 		velocity = applyFriction(velocity, module.Friction, deltaTime)
-		hrs.CFrame = CFrame.new(nextPos, nextPos + velocity.Unit) * CFrame.new(0, 0, -distance)
+
+		if velocity.Magnitude > 0.001 then
+			hrs.CFrame = CFrame.new(nextPos, nextPos + velocity.Unit) * CFrame.new(0, 0, -distance)
+		else
+			hrs.CFrame = CFrame.new(nextPos)
+		end
 	end))
 end
 
