@@ -117,7 +117,7 @@ function module.Init()
 
 		if rayCast2 then
 			local dotProduct = rayCast2.Normal:Dot(velocity.Unit)
-			if dotProduct > -0.8 then
+			if dotProduct > -0.65 then
 				velocity = bounce(velocity.Unit, rayCast2, distance) * velocity.Magnitude
 			end
 		end
