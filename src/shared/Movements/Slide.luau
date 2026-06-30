@@ -7,11 +7,12 @@ local CurrentCamera = workspace.CurrentCamera
 
 local module = {
 	SlideSpeed = 12,
-	TurningSpeed = 35,
+	TurningSpeed = 120,
 	Gravity = workspace.Gravity * 1.3,
 	Friction = 0.4,
 }
 
+local velocity
 local newTrove = trove.new()
 local started = tick()
 
@@ -61,7 +62,7 @@ function module.Init()
 
 	local rayLenght = 2.5 + (hrs.Size.Y / 2)
 	local lastTimeOnGround = tick() - started
-	local velocity: Vector3 = hrs.CFrame.LookVector.Unit
+	velocity = hrs.CFrame.LookVector.Unit
 		* math.max(module.SlideSpeed, hrs.AssemblyLinearVelocity.Magnitude)
 	local param = RaycastParams.new()
 	param.FilterType = Enum.RaycastFilterType.Exclude
@@ -69,8 +70,6 @@ function module.Init()
 
 	local function bounce(dir, rayCast2, distance)
 		local reflection = getReflection(dir, rayCast2.Normal.Unit)
-		hrs.CFrame = CFrame.new(rayCast2.Position, rayCast2.Position + reflection)
-			* CFrame.new(0, 0, -(distance - rayCast2.Distance))
 		return reflection.Unit
 	end
 
@@ -111,7 +110,7 @@ function module.Init()
 		end
 
 		local distance = velocity.Magnitude * deltaTime
-		local rayCast2 = workspace:Raycast(nextPos, velocity.Unit * (distance), param) -- Checking for any "bumps"
+		local rayCast2 = workspace:Raycast(nextPos, velocity.Unit * distance, param) -- Checking for any "bumps"
 
 		if rayCast2 then
 			velocity = bounce(velocity.Unit, rayCast2, distance) * velocity.Magnitude
@@ -121,6 +120,26 @@ function module.Init()
 	end))
 end
 
-module.End = function() end
+module.End = function()
+	if not RunService:IsClient() then
+		return
+	end
+	local char = localPlayer.Character
+	if not char then
+		return
+	end
+	local hum: BasePart = char:FindFirstChildOfClass("Humanoid")
+	if not hum then
+		return
+	end
+	local hrs: BasePart = char:FindFirstChild("HumanoidRootPart")
+	if not hrs then
+		return
+	end
+	hrs.Anchored = false
+	hrs.AssemblyLinearVelocity = velocity
+	velocity = Vector3.zero
+	newTrove:Clean()
+end
 
 return module
