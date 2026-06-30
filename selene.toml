@@ -1,0 +1,31 @@
+# Selene configuration tuned for Roblox optimization.
+# Focus on catching common performance pitfalls and keeping lint output relevant.
+
+[tool.selene]
+include = ["**/*.lua"]
+exclude = ["**/node_modules/**", "**/.git/**", "bin/**"]
+ignore = [
+  "line-too-long",
+  "missing-doc",
+  "unused-variable",
+  "unused-function",
+]
+
+# For Roblox projects, keep the rules strict on correctness and performance.
+# Disable only those style rules that are not directly related to optimization.
+
+[tool.selene.rules]
+# Common runtime issues
+no-global = "error"
+unused-local = "warning"
+unused-variable = "warning"
+shadowing = "warning"
+
+# Avoid expensive or unsafe patterns
+no-unsafe-connection = "warning"
+no-implicit-fallthrough = "warning"
+
+# Keep code fast and maintainable
+no-redundant-do = "warning"
+no-empty-block = "warning"
+no-unused-return = "warning"
