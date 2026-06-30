@@ -62,8 +62,7 @@ function module.Init()
 
 	local rayLenght = 2.5 + (hrs.Size.Y / 2)
 	local lastTimeOnGround = tick() - started
-	velocity = hrs.CFrame.LookVector.Unit
-		* math.max(module.SlideSpeed, hrs.AssemblyLinearVelocity.Magnitude)
+	velocity = hrs.CFrame.LookVector.Unit * math.max(module.SlideSpeed, hrs.AssemblyLinearVelocity.Magnitude)
 	local param = RaycastParams.new()
 	param.FilterType = Enum.RaycastFilterType.Exclude
 	param.FilterDescendantsInstances = { char }
@@ -93,11 +92,15 @@ function module.Init()
 				)
 			).LookVector -- Neutral camera rotation
 
-			local dir3 = (dir1:Lerp(dir2, (module.TurningSpeed / 100) * deltaTime)) -- slight and FINAL rotation.
+			local dir3 = projectPointOnPlane(
+				dir1:Lerp(dir2, (module.TurningSpeed / 100) * deltaTime),
+				rayCast.Position,
+				rayCast.Normal
+			) -- slight and FINAL rotation.
 			local posOnPlane = projectPointOnPlane(rayOrigin, rayCast.Position, rayCast.Normal)
 
 			nextPos = posOnPlane + rayCast.Normal * rayLenght
-			velocity = projectVectorOnPlane(dir3, rayCast.Normal).Unit * velocity.Magnitude
+			velocity = dir3.Unit * velocity.Magnitude
 
 			local gravity = Vector3.yAxis * -module.Gravity
 			local gravityAlongSlope = gravity - rayCast.Normal * gravity:Dot(rayCast.Normal)
@@ -113,7 +116,10 @@ function module.Init()
 		local rayCast2 = workspace:Raycast(nextPos, velocity.Unit * distance, param) -- Checking for any "bumps"
 
 		if rayCast2 then
-			velocity = bounce(velocity.Unit, rayCast2, distance) * velocity.Magnitude
+			local dotProduct = rayCast2.Normal:Dot(velocity.Unit)
+			if dotProduct > -0.8 then
+				velocity = bounce(velocity.Unit, rayCast2, distance) * velocity.Magnitude
+			end
 		end
 
 		hrs.CFrame = CFrame.new(nextPos, nextPos + velocity.Unit) * CFrame.new(0, 0, -distance)
