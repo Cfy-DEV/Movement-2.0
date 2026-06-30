@@ -75,7 +75,7 @@ function module.Init()
 	newTrove:Add(RunService.RenderStepped:Connect(function(deltaTime: number)
 		local diff2 = tick() - lastTimeOnGround
 		local rayOrigin = hrs.Position
-		local rayDir = -hrs.CFrame.UpVector * (rayLenght * 1.05)
+		local rayDir = (velocity-(Vector3.yAxis * .5)) * (rayLenght * 1.05)
 		local nextPos
 		local rayCast = workspace:Raycast(rayOrigin, rayDir, param)
 
@@ -106,7 +106,6 @@ function module.Init()
 			local gravityAlongSlope = gravity - rayCast.Normal * gravity:Dot(rayCast.Normal)
 
 			velocity = gravityAlongSlope * deltaTime
-			velocity = applyFriction(velocity, module.Friction, deltaTime)
 		else
 			velocity = velocity - Vector3.yAxis * (module.Gravity * deltaTime)
 			nextPos = rayOrigin
@@ -122,6 +121,7 @@ function module.Init()
 			end
 		end
 
+		velocity = applyFriction(velocity, module.Friction, deltaTime)
 		hrs.CFrame = CFrame.new(nextPos, nextPos + velocity.Unit) * CFrame.new(0, 0, -distance)
 	end))
 end
