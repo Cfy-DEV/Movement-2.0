@@ -59,40 +59,31 @@ function module.Init()
 
 	hrs.Anchored = true
 
-	local lastDir = Vector3.new(hrs.CFrame.LookVector.X, 0, hrs.CFrame.LookVector.Z)
 	local rayLenght = 2.5 + (hrs.Size.Y / 2)
-	local speed = math.clamp(hrs.AssemblyLinearVelocity.Magnitude, module.SlideSpeed, math.huge)
 	local lastTimeOnGround = tick() - started
-
+	local velocity: Vector3 = hrs.CFrame.LookVector.Unit
+		* math.max(module.SlideSpeed, hrs.AssemblyLinearVelocity.Magnitude)
 	local param = RaycastParams.new()
 	param.FilterType = Enum.RaycastFilterType.Exclude
 	param.FilterDescendantsInstances = { char }
 
-	local function bounce(nextDir, rayCast2, distance)
-		local reflection = getReflection(nextDir, rayCast2.Normal.Unit)
+	local function bounce(dir, rayCast2, distance)
+		local reflection = getReflection(dir, rayCast2.Normal.Unit)
 		hrs.CFrame = CFrame.new(rayCast2.Position, rayCast2.Position + reflection)
 			* CFrame.new(0, 0, -(distance - rayCast2.Distance))
-		lastDir = reflection.Unit
+		return reflection.Unit
 	end
 
 	newTrove:Add(RunService.RenderStepped:Connect(function(deltaTime: number)
-		local diff = tick() - started
 		local diff2 = tick() - lastTimeOnGround
 		local rayOrigin = hrs.Position
 		local rayDir = -hrs.CFrame.UpVector * (rayLenght * 1.05)
 		local nextPos
 		local rayCast = workspace:Raycast(rayOrigin, rayDir, param)
 
-		local nextDir
-
 		if rayCast then
-			if diff2 > 0.35 then
-				bounce(nextDir, rayCast, speed * deltaTime)
-				lastTimeOnGround = tick()
-				return
-			end
 			lastTimeOnGround = tick()
-			local dir1 = Vector3.new(lastDir.X, 0, lastDir.Z)
+			local dir1 = Vector3.new(velocity.Unit.X, 0, velocity.Unit.Z)
 
 			local dir2 = CFrame.lookAt(
 				CurrentCamera.CFrame.Position,
@@ -107,33 +98,26 @@ function module.Init()
 			local posOnPlane = projectPointOnPlane(rayOrigin, rayCast.Position, rayCast.Normal)
 
 			nextPos = posOnPlane + rayCast.Normal * rayLenght
-			nextDir = projectVectorOnPlane(dir3, rayCast.Normal)
+			velocity = projectVectorOnPlane(dir3, rayCast.Normal).Unit * velocity.Magnitude
 
-			if nextDir.Magnitude > 1e-4 then
-				nextDir = nextDir.Unit
-			else
-				nextDir = lastDir
-			end
+			local gravity = Vector3.yAxis * -module.Gravity
+			local gravityAlongSlope = gravity - rayCast.Normal * gravity:Dot(rayCast.Normal)
 
-			local gravity = Vector3.new(0, -module.Gravity, 0)
-			local accel = gravity:Dot(nextDir)
-
-			speed = math.max(module.SlideSpeed, applyFriction(speed, module.Friction, deltaTime) + (accel * deltaTime))
+			velocity += gravityAlongSlope * deltaTime
+			velocity = applyFriction(velocity, module.Friction, deltaTime)
 		else
-			speed += module.Gravity * diff2
+			velocity = velocity - Vector3.yAxis * (module.Gravity * deltaTime)
 			nextPos = rayOrigin
-			nextDir = lastDir:Lerp(Vector3.new(lastDir.X, -1, lastDir.Z), module.Gravity * deltaTime)
 		end
 
-		local distance = speed * deltaTime
-		local rayCast2 = workspace:Raycast(nextPos, nextDir * distance, param) -- Checking for any "bumps"
+		local distance = velocity.Magnitude * deltaTime
+		local rayCast2 = workspace:Raycast(nextPos, velocity.Unit * (distance), param) -- Checking for any "bumps"
 
 		if rayCast2 then
-			bounce(nextDir, rayCast2, distance)
-		else
-			hrs.CFrame = CFrame.new(nextPos, nextPos + (nextDir * distance)) * CFrame.new(0, 0, -distance)
-			lastDir = nextDir.Unit
+			velocity = bounce(velocity.Unit, rayCast2, distance) * velocity.Magnitude
 		end
+
+		hrs.CFrame = CFrame.new(nextPos, nextPos + velocity.Unit) * CFrame.new(0, 0, -distance)
 	end))
 end
 
